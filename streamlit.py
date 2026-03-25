@@ -3,179 +3,170 @@ import json
 from Backend.analyzer.log_analyzer import analyze_logs
 from Backend.analyzer.risk_engine import calculate_risk
 
-# Page config
 st.set_page_config(page_title="AI Secure Platform", layout="wide")
 
-# Hide default Streamlit UI + Custom Top Bar
 st.markdown("""
 <style>
-header {visibility: hidden;}
-footer {visibility: hidden;}
-#MainMenu {visibility: hidden;}
+header, footer, #MainMenu {visibility: hidden;}
 
+/* BACKGROUND */
+.stApp {
+    background: #0b0b0f;
+    color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* TOP BAR */
 .top-bar {
-    background: linear-gradient(to right, #4169E1, #00C9FF);
-    padding: 15px;
-    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    padding: 18px;
+    border-radius: 16px;
     text-align: center;
     font-size: 24px;
-    font-weight: bold;
-    color: white;
-    box-shadow: 0 0 15px #00C9FF;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 30px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* CARD */
+.card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 20px;
     margin-bottom: 20px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# Background + UI Styling
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(to right, #0A0F2C, #121A3A);
-    color: white;
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
+/* METRIC */
+.metric {
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    padding: 15px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* BUTTON */
 .stButton>button {
-    background-color: #4169E1;
-    color: white;
-    border-radius: 8px;
-    border: none;
+    background: #1c1c1e;
+    color: #f1f5f9;
+    border-radius: 12px;
     padding: 10px 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: 0.2s ease;
 }
 
 .stButton>button:hover {
-    background-color: #00C9FF;
-    color: black;
+    background: #2c2c2e;
 }
 
+/* TEXT AREA */
 textarea {
-    background-color: #121A3A !important;
-    color: white !important;
-    border-radius: 10px !important;
+    background-color: #111113 !important;
+    color: #f1f5f9 !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
 }
 
-.stFileUploader {
-    background-color: #121A3A;
-    border-radius: 10px;
-    padding: 10px;
+/* FILE UPLOADER */
+[data-testid="stFileUploader"] {
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
 }
 
+/* HEADINGS */
 h1, h2, h3 {
-    color: #00C9FF;
+    color: #e5e7eb;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# Title Bar
-st.markdown("""
-<div class="top-bar">
-    🔐 AI Secure Data Intelligence Platform
-</div>
-""", unsafe_allow_html=True)
+# ---------- TITLE ----------
+st.markdown('<div class="top-bar"> AI Secure Data Intelligence Platform</div>', unsafe_allow_html=True)
 
-st.markdown(
-    "<center>Analyze logs to detect sensitive data, risks, and insights</center>",
-    unsafe_allow_html=True
-)
+# ---------- INPUT ----------
+st.markdown("## Input Data")
 
-# Layout
-colA, colB = st.columns(2)
+input_text = st.text_area("Paste Logs / Text", height=200)
+uploaded_file = st.file_uploader("Upload Log File", type=["txt", "log"])
+analyze_btn = st.button(" Analyze")
 
-# Input Section
-with colA:
-    st.subheader("📥 Input Data")
-    input_text = st.text_area("Paste Logs / Text", height=200)
-    uploaded_file = st.file_uploader("Upload Log File", type=["txt", "log"])
-    analyze_btn = st.button("🚀 Analyze")
-
-# Output Section
-with colB:
-    st.subheader("📊 Results")
-
-# Process
+# ---------- RESULTS ----------
 if analyze_btn:
-    with st.spinner("Analyzing..."):
 
-        text = input_text
+    text = input_text
+    if uploaded_file:
+        text = uploaded_file.read().decode("utf-8")
 
-        if uploaded_file is not None:
-            text = uploaded_file.read().decode("utf-8")
+    if not text:
+        st.warning("Please enter text or upload file")
 
-        if not text:
-            st.warning("Please enter text or upload a file")
+    else:
+        findings = analyze_logs(text)
+        score, level = calculate_risk(findings)
 
-        else:
-            try:
-                findings = analyze_logs(text)
-                score, level = calculate_risk(findings)
+        # ---------- OVERVIEW ----------
+        st.markdown("## Overview")
 
-                data = {
-                    "summary": f"Detected {len(findings)} potential security issues",
-                    "content_type": "log",
-                    "findings": findings,
-                    "risk_score": score,
-                    "risk_level": level,
-                    "action": "masked",
-                    "insights": [
-                        "Sensitive credentials exposed",
-                        "Potential security risks detected",
-                        "System errors found in logs"
-                    ]
-                }
+        m1, m2, m3 = st.columns(3)
 
-                # Summary
-                st.markdown("## 📊 Summary")
-                st.info(data["summary"])
+        with m1:
+            st.markdown(f'<div class="metric">Issues<br><h2>{len(findings)}</h2></div>', unsafe_allow_html=True)
 
-                # Risk Score
-                st.markdown("## ⚠ Risk Score")
-                col1, col2 = st.columns(2)
+        with m2:
+            st.markdown(f'<div class="metric">Risk Score<br><h2>{score}</h2></div>', unsafe_allow_html=True)
 
-                with col1:
-                    st.metric("Risk Score", data["risk_score"])
+        with m3:
+            color = "#22c55e"
+            if level == "high":
+                color = "#ef4444"
+            elif level == "medium":
+                color = "#f59e0b"
 
-                with col2:
-                    if data["risk_level"] == "high":
-                        st.error("🔴 HIGH RISK")
-                    elif data["risk_level"] == "medium":
-                        st.warning("🟡 MEDIUM RISK")
-                    else:
-                        st.success("🟢 LOW RISK")
+            st.markdown(f'<div class="metric" style="background:{color}">RISK<br><h2>{level.upper()}</h2></div>', unsafe_allow_html=True)
 
-                # Findings
-                st.markdown("### 🔍 Findings")
-                for f in data["findings"]:
-                    st.write(f"• {f['type'].upper()} → {f['risk']} (line {f['line']})")
+        # ---------- INSIGHTS ----------
+        st.markdown("##  AI Insights")
 
-                # Insights
-                st.markdown("### 💡 Insights")
-                for i in data["insights"]:
-                    st.write(f"• {i}")
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
-                # Log Viewer
-                st.markdown("### 📜 Log Viewer")
-                lines = text.split("\n")
+        st.write(
+            f"Detected {len(findings)} potential security issues. "
+            f"The system identifies sensitive data exposure and categorizes risks based on severity."
+        )
 
-                for idx, line in enumerate(lines):
-                    is_risk = any(f["line"] == idx + 1 for f in data["findings"])
+        st.write("• Sensitive credentials exposed")
+        st.write("• Potential security risks detected")
+        st.write("• System errors found in logs")
 
-                    if is_risk:
-                        st.markdown(f"🔴 **{idx+1}: {line}**")
-                    else:
-                        st.markdown(f"{idx+1}: {line}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-                # Download Report
-                st.markdown("### 📥 Download Report")
+        # ---------- TABLE ----------
+        st.markdown("##  Detected Risks")
 
-                report = json.dumps(data, indent=4)
+        table = []
+        for f in findings:
+            table.append({
+                "Line": f["line"],
+                "Type": f["type"].upper(),
+                "Severity": f["risk"].upper(),
+                "Description": f"{f['type']} detected"
+            })
 
-                st.download_button(
-                    label="⬇ Download JSON Report",
-                    data=report,
-                    file_name="analysis_report.json",
-                    mime="application/json"
-                )
+        st.dataframe(table, use_container_width=True)
 
-            except Exception as e:
-                st.error("Error occurred")
-                st.write(e)
+        # ---------- DOWNLOAD ----------
+        st.markdown("##  Download Report")
+
+        report = json.dumps(table, indent=4)
+
+        st.download_button(
+            "⬇ Download Report",
+            data=report,
+            file_name="report.json",
+            mime="application/json"
+        )
